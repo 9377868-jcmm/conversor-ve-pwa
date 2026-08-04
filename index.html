@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Conversor de Monedas y Tasas — Venezuela</title>
+  <meta name="description" content="Conversor de bolívares, dólar BCV, paralelo, USDT, euro y peso colombiano.">
+  <meta name="theme-color" content="#0f1115">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>💱 Conversor de Monedas VE</h1>
+    <nav class="tabs">
+      <button class="tab active" data-tab="conversor">Conversor</button>
+      <button class="tab" data-tab="historial">Historial</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <!-- ============== PESTAÑA CONVERSOR ============== -->
+    <section id="tab-conversor" class="tabpane active">
+      <div class="toolbar">
+        <button id="btn-actualizar" class="btn primary">🔄 Actualizar tasas</button>
+        <div class="bridge">
+          <label for="bridge-select">Puente USD para EUR/COP:</label>
+          <select id="bridge-select">
+            <option value="bcv">Dólar BCV</option>
+            <option value="paralelo">Dólar Paralelo</option>
+            <option value="usdt">Dólar USDT</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="aviso" class="aviso oculto"></div>
+      <div id="offline-aviso" class="aviso oculto"></div>
+
+      <div id="grid" class="grid">
+        <!-- Las tarjetas de moneda se generan con JavaScript -->
+      </div>
+
+      <p class="pie">
+        Escribe un monto en cualquier campo y los demás se recalculan al
+        instante. Usa el ✏️ para editar una tasa a mano. Todo se guarda en
+        este dispositivo.
+      </p>
+    </section>
+
+    <!-- ============== PESTAÑA HISTORIAL ============== -->
+    <section id="tab-historial" class="tabpane">
+      <h2>Historial de tasas</h2>
+      <div class="chart-box">
+        <canvas id="chart" height="120"></canvas>
+        <p id="chart-fallback" class="muted oculto">
+          (No se pudo cargar el gráfico; se muestra solo la tabla.)
+        </p>
+      </div>
+      <div class="tabla-scroll">
+        <table id="tabla-historial">
+          <thead>
+            <tr>
+              <th>Fecha/hora</th><th>Tipo</th>
+              <th>BCV</th><th>Paralelo</th><th>USDT</th>
+              <th>EUR</th><th>COP</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button id="btn-borrar-historial" class="btn">🗑️ Borrar historial de este dispositivo</button>
+    </section>
+  </main>
+
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
