@@ -24,7 +24,10 @@
     <!-- ============== PESTAÑA CONVERSOR ============== -->
     <section id="tab-conversor" class="tabpane active">
       <div class="toolbar">
-        <button id="btn-actualizar" class="btn primary">🔄 Actualizar tasas</button>
+        <div class="acciones">
+          <button id="btn-actualizar" class="btn primary">🔄 Actualizar tasas</button>
+          <button id="btn-limpiar" class="btn" title="Borrar todos los montos escritos (tecla Esc)">🧹 Limpiar</button>
+        </div>
         <div class="bridge">
           <label for="bridge-select">Puente USD para EUR/COP:</label>
           <select id="bridge-select">
@@ -44,14 +47,16 @@
 
       <p class="pie">
         Escribe un monto en cualquier campo y los demás se recalculan al
-        instante. Usa el ✏️ para editar una tasa a mano. Todo se guarda en
-        este dispositivo.
+        instante. Usa 📋 para copiar el monto de una moneda, ✏️ para editar
+        una tasa a mano y 🧹 para limpiar los montos. Todo se guarda en este
+        dispositivo.
       </p>
     </section>
 
     <!-- ============== PESTAÑA HISTORIAL ============== -->
     <section id="tab-historial" class="tabpane">
       <h2>Historial de tasas</h2>
+      <p id="historial-estado" class="historial-estado"></p>
       <div class="chart-box">
         <canvas id="chart" height="120"></canvas>
         <p id="chart-fallback" class="muted oculto">

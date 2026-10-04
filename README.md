@@ -27,6 +27,27 @@ python -m http.server 5500
 
 Y abre `http://localhost:5500` en el navegador.
 
+## Archivo único para descargar
+
+`dist/conversor-ve.html` es la app completa en **un solo archivo HTML**
+(estilos, código, Chart.js e ícono incrustados). Se abre con doble clic en
+cualquier navegador, sin servidor; solo no incluye el modo offline del
+service worker. Para regenerarlo tras cambiar el código:
+
+```bash
+python build_standalone.py
+```
+
+## Funciones
+
+- 🧹 **Limpiar**: borra todos los montos (también con la tecla `Esc`).
+- 📋 **Copiar** en cada moneda: copia el monto, la tasa y su equivalente en Bs.
+- La zona de montos tiene fondo y tipografía propios; el monto que escribes
+  queda resaltado y los calculados se ven atenuados.
+- **Historial diario automático**: al abrir la app (y cada 30 min mientras
+  esté abierta, al volver a ella o al recuperar conexión) se consultan las
+  tasas si todavía no hay un registro automático del día.
+
 ## Regenerar los íconos
 
 Los íconos (`icons/*.png`) se generan con Pillow, sin depender de ningún
