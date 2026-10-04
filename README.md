@@ -38,6 +38,28 @@ service worker. Para regenerarlo tras cambiar el código:
 python build_standalone.py
 ```
 
+## APK de Android (funciona sin internet)
+
+`dist/conversor-ve.apk` instala la app en Android 7.0 o superior. La interfaz,
+el cálculo y el historial van dentro del APK, así que abre y convierte sin
+conexión; solo pide internet para traer tasas nuevas.
+
+Para compilarlo (solo necesita Java 17+, Python 3, curl y unzip; las
+herramientas se bajan solas de Maven Central, sin Android Studio):
+
+```bash
+bash android/build_apk.sh
+```
+
+La primera vez crea la llave de firma `android/conversor-ve.p12` (no se sube
+a git). **Guárdala**: Android solo deja actualizar la app instalada con un
+APK firmado con la misma llave; con otra llave habría que desinstalar y se
+perdería el historial guardado. Para una versión nueva sube `VERSION_CODE`:
+
+```bash
+VERSION_CODE=3 VERSION_NAME=1.2 bash android/build_apk.sh
+```
+
 ## Funciones
 
 - 🧹 **Limpiar**: borra todos los montos (también con la tecla `Esc`).
