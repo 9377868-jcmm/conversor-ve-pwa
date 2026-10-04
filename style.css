@@ -9,6 +9,12 @@
   --accent2: #2fd08a;
   --warn: #ffb547;
   --danger: #ff6b6b;
+  /* Zona de montos: fondo atenuado y tipografía propia para distinguirla */
+  --campo-bg: #121a2b;
+  --campo-borde: #26385c;
+  --campo-texto: #f4f7ff;
+  --campo-calc: #a9b8d6;
+  --font-num: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -74,7 +80,10 @@ body {
   background: var(--card2);
   color: var(--text);
 }
+.btn:hover:not(:disabled) { filter: brightness(1.12); }
 .btn.primary { background: var(--accent); color: #fff; }
+.acciones { display: flex; gap: 10px; }
+#btn-limpiar { border: 1px solid var(--border); }
 .btn.danger { background: #3a1418; color: var(--danger); }
 .btn:disabled { opacity: .6; cursor: progress; }
 
@@ -113,7 +122,9 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
+  transition: border-color .2s, box-shadow .2s;
 }
+.moneda.origen { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .moneda .cabecera {
   display: flex;
   align-items: center;
@@ -124,17 +135,60 @@ body {
 .moneda .nombre { font-weight: 600; }
 .moneda .cod { color: var(--muted); font-weight: 400; font-size: .82rem; margin-left: 4px; }
 
-.moneda input.monto {
-  width: 100%;
-  background: var(--card2);
+/* Botón copiar */
+.btn-copiar {
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 1.25rem;
-  padding: 10px 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px 9px;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.btn-copiar:hover { color: var(--text); border-color: var(--accent); }
+.btn-copiar.copiado { color: var(--accent2); border-color: var(--accent2); }
+
+/* Zona de datos de conversión: fondo atenuado + fuente monoespaciada */
+.campo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--campo-bg);
+  border: 1px solid var(--campo-borde);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: text;
+  transition: border-color .2s, background .2s;
+}
+.campo:focus-within { border-color: var(--accent); background: #15203a; }
+.campo .simbolo {
+  font-family: var(--font-num);
+  font-size: .95rem;
+  color: var(--muted);
+  min-width: 1.4em;
+}
+.moneda input.monto {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--campo-texto);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 1.35rem;
+  letter-spacing: .02em;
+  padding: 8px 0;
   text-align: right;
 }
-.moneda input.monto:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.moneda input.monto::placeholder { color: #3d4a63; font-weight: 400; }
+/* Montos calculados: color atenuado e itálica suave; el origen queda nítido */
+.moneda.calculada input.monto { color: var(--campo-calc); font-weight: 500; font-style: italic; }
+.moneda.origen .campo { background: #172443; border-color: var(--accent); }
+.moneda.origen .simbolo { color: var(--accent); }
 
 .tasa-linea {
   display: flex;
@@ -198,6 +252,11 @@ td.tipo-manual { color: var(--warn); }
 .muted { color: var(--muted); }
 .pie { color: var(--muted); font-size: .85rem; margin-top: 18px; }
 
+.historial-estado { color: var(--muted); font-size: .86rem; margin: -6px 0 14px; }
+.punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.punto.ok { background: var(--accent2); }
+.punto.pendiente { background: var(--warn); }
+
 #btn-borrar-historial { margin-top: 16px; }
 
 /* ---------- Responsive (celular) ---------- */
@@ -205,4 +264,5 @@ td.tipo-manual { color: var(--warn); }
   .grid { grid-template-columns: 1fr; }
   .topbar h1 { font-size: 1rem; }
   .toolbar { flex-direction: column; align-items: stretch; }
+  .acciones .btn { flex: 1; }
 }

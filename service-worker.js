@@ -2,7 +2,7 @@
    Las tasas siguen necesitando internet para actualizarse; el resto
    (interfaz, cálculo, historial guardado) funciona offline. */
 
-const CACHE = "monedas-ve-v1";
+const CACHE = "monedas-ve-v2";
 const APP_SHELL = [
   "./",
   "./index.html",

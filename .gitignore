@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# Android
+android/build/
+android/.tools/
+android/*.p12

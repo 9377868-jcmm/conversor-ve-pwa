@@ -4,12 +4,12 @@
    localStorage (persisten aunque cierres la app o el celular se apague). */
 
 const MONEDAS = [
-  { key: "ves",      nombre: "Bolívar",          cod: "VES",  base: true },
-  { key: "bcv",      nombre: "Dólar BCV",         cod: "USD",  unidad: "Bs por USD" },
-  { key: "paralelo", nombre: "Dólar Paralelo",    cod: "USD",  unidad: "Bs por USD" },
-  { key: "usdt",     nombre: "Dólar USDT",        cod: "USDT", unidad: "Bs por USDT" },
-  { key: "eur",      nombre: "Euro",              cod: "EUR",  unidad: "Bs por EUR" },
-  { key: "cop",      nombre: "Peso colombiano",   cod: "COP",  unidad: "Bs por COP" },
+  { key: "ves",      nombre: "Bolívar",          cod: "VES",  simbolo: "Bs", base: true },
+  { key: "bcv",      nombre: "Dólar BCV",         cod: "USD",  simbolo: "$",  unidad: "Bs por USD" },
+  { key: "paralelo", nombre: "Dólar Paralelo",    cod: "USD",  simbolo: "$",  unidad: "Bs por USD" },
+  { key: "usdt",     nombre: "Dólar USDT",        cod: "USDT", simbolo: "₮",  unidad: "Bs por USDT" },
+  { key: "eur",      nombre: "Euro",              cod: "EUR",  simbolo: "€",  unidad: "Bs por EUR" },
+  { key: "cop",      nombre: "Peso colombiano",   cod: "COP",  simbolo: "$",  unidad: "Bs por COP" },
 ];
 const RATE_KEYS = ["bcv", "paralelo", "usdt", "eur", "cop"];
 
@@ -32,6 +32,11 @@ let estado = null;
 let historial = [];
 let origen = { key: null, amount: null };
 let chart = null;
+let actualizando = false;
+
+/* Revisión automática diaria del historial: cada 30 min (mientras la app
+   esté abierta), al volver a primer plano y al recuperar la conexión. */
+const REVISION_DIARIA_MS = 30 * 60 * 1000;
 
 /* ============================ persistencia =============================== */
 function loadState() {
@@ -216,6 +221,7 @@ function renderGrid() {
   for (const mon of MONEDAS) {
     const card = document.createElement("div");
     card.className = "moneda" + (mon.base ? " base" : "");
+    card.dataset.key = mon.key;
 
     const r = estado.rates[mon.key];
     let tasaHTML;
@@ -236,9 +242,14 @@ function renderGrid() {
     card.innerHTML = `
       <div class="cabecera">
         <div class="nombre">${mon.nombre}<span class="cod">${mon.cod}</span></div>
+        <button class="btn-copiar" data-copy="${mon.key}" title="Copiar monto de ${mon.nombre}"
+                aria-label="Copiar monto de ${mon.nombre}">📋 Copiar</button>
       </div>
-      <input class="monto" id="monto-${mon.key}" inputmode="decimal"
-             autocomplete="off" placeholder="0" />
+      <label class="campo" for="monto-${mon.key}">
+        <span class="simbolo">${mon.simbolo}</span>
+        <input class="monto" id="monto-${mon.key}" inputmode="decimal"
+               autocomplete="off" placeholder="0,00" aria-label="Monto en ${mon.nombre}" />
+      </label>
       ${tasaHTML}`;
     grid.appendChild(card);
   }
@@ -259,8 +270,12 @@ function renderGrid() {
   grid.querySelectorAll("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", () => abrirEditor(btn.dataset.edit));
   });
+  grid.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", () => copiarMoneda(btn.dataset.copy, btn));
+  });
 
   document.getElementById("bridge-select").value = estado.bridge;
+  marcarOrigen();
 }
 
 function onInputMonto(key) {
@@ -269,9 +284,11 @@ function onInputMonto(key) {
   if (isNaN(val)) {
     for (const mon of MONEDAS) if (mon.key !== key) document.getElementById("monto-" + mon.key).value = "";
     origen = { key: null, amount: null };
+    marcarOrigen();
     return;
   }
   origen = { key, amount: val };
+  marcarOrigen();
   const res = convertir(val, key);
   for (const mon of MONEDAS) {
     if (mon.key === key) continue;
@@ -286,6 +303,73 @@ function recalcular() {
     if (inp === document.activeElement) continue;
     inp.value = fmtMonto(res[mon.key]);
   }
+}
+
+/* Resalta la tarjeta donde el usuario escribió y atenúa las calculadas. */
+function marcarOrigen() {
+  document.querySelectorAll("#grid .moneda").forEach((card) => {
+    const esOrigen = card.dataset.key === origen.key;
+    card.classList.toggle("origen", esOrigen);
+    card.classList.toggle("calculada", origen.key != null && !esOrigen);
+  });
+}
+
+/* ============================ limpiar montos ================================== */
+function limpiarMontos() {
+  for (const mon of MONEDAS) document.getElementById("monto-" + mon.key).value = "";
+  origen = { key: null, amount: null };
+  marcarOrigen();
+  document.getElementById("monto-ves").focus();
+}
+
+/* ============================ copiar ========================================== */
+function textoMoneda(key) {
+  const mon = MONEDAS.find((m) => m.key === key);
+  const monto = parseNum(document.getElementById("monto-" + key).value);
+  if (isNaN(monto)) return null;
+  let texto = `${mon.nombre}: ${mon.simbolo} ${fmtMonto(monto)} ${mon.cod}`;
+  if (!mon.base) {
+    const r = estado.rates[key];
+    texto += `\nTasa: ${fmtTasa(r.value)} ${mon.unidad} (${fmtFecha(r.updated)})`;
+    texto += `\nEquivale a: Bs ${fmtMonto(monto * Number(r.value))}`;
+  }
+  return texto;
+}
+
+async function copiarTexto(texto) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(texto); return true; } catch (e) { /* usar respaldo */ }
+  }
+  const ta = document.createElement("textarea");
+  ta.value = texto;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+async function copiarMoneda(key, btn) {
+  const texto = textoMoneda(key);
+  if (!texto) {
+    mostrarAviso("No hay monto para copiar: escribe una cantidad primero.", "info");
+    return;
+  }
+  const ok = await copiarTexto(texto);
+  if (!ok) {
+    mostrarAviso("No se pudo copiar automáticamente. Mantén presionado el monto para copiarlo a mano.", "info");
+    return;
+  }
+  btn.classList.add("copiado");
+  btn.textContent = "✅ Copiado";
+  setTimeout(() => {
+    btn.classList.remove("copiado");
+    btn.textContent = "📋 Copiar";
+  }, 1600);
 }
 
 /* ============================ editor manual de tasa =========================== */
@@ -328,12 +412,14 @@ function guardarTasaManual(key, value) {
 }
 
 /* ============================ actualizar desde internet ======================= */
-async function actualizarTasas() {
+async function actualizarTasas({ automatico = false } = {}) {
   const btn = document.getElementById("btn-actualizar");
+  if (actualizando) return;
   if (!navigator.onLine) {
-    mostrarAviso("Sin conexión a internet: no se pudieron pedir tasas nuevas. Se conservan los últimos valores guardados; puedes editarlos a mano.", "info");
+    if (!automatico) mostrarAviso("Sin conexión a internet: no se pudieron pedir tasas nuevas. Se conservan los últimos valores guardados; puedes editarlos a mano.", "info");
     return;
   }
+  actualizando = true;
   btn.disabled = true;
   btn.textContent = "⏳ Actualizando...";
   const warnings = [];
@@ -348,22 +434,52 @@ async function actualizarTasas() {
       estado.rates.eur.manual = false;
       estado.rates.cop.manual = false;
     }
+    if (!Object.keys(usd).length && !factors) {
+      // Ninguna fuente respondió: no se registra un día "falso" en el historial.
+      if (!automatico) mostrarAviso("No se pudo obtener ninguna tasa nueva. Se conservan los últimos valores; puedes editarlos a mano.", "info");
+      return;
+    }
     recomputeDerived();
     saveState();
     appendHistory("auto");
     renderGrid();
     recalcular();
-    if (warnings.length) {
+    refrescarHistorialSiVisible();
+    if (automatico && !warnings.length) {
+      mostrarAviso("Tasas del día actualizadas automáticamente y guardadas en el historial.", "ok");
+    } else if (warnings.length) {
       mostrarAviso("Actualización parcial:\n• " + warnings.join("\n• ") + "\nSe conservaron los últimos valores conocidos.", "info");
     } else {
       mostrarAviso("Tasas actualizadas correctamente desde internet.", "ok");
     }
   } catch (e) {
-    mostrarAviso("No se pudo conectar para actualizar. Se conservan los últimos valores; puedes editarlos a mano.", "info");
+    if (!automatico) mostrarAviso("No se pudo conectar para actualizar. Se conservan los últimos valores; puedes editarlos a mano.", "info");
   } finally {
+    actualizando = false;
     btn.disabled = false;
     btn.textContent = "🔄 Actualizar tasas";
   }
+}
+
+/* ============================ actualización diaria automática ================= */
+function claveDia(fecha) {
+  // AAAA-MM-DD en la hora local del dispositivo.
+  return fecha.toLocaleDateString("en-CA");
+}
+function ultimoRegistroAuto() {
+  for (let i = historial.length - 1; i >= 0; i--) {
+    if (historial[i].tipo === "auto") return historial[i];
+  }
+  return null;
+}
+function hayRegistroDeHoy() {
+  const ultimo = ultimoRegistroAuto();
+  return !!ultimo && claveDia(new Date(ultimo.timestamp)) === claveDia(new Date());
+}
+async function revisarActualizacionDiaria() {
+  if (document.visibilityState === "hidden") return;
+  if (hayRegistroDeHoy()) return;
+  await actualizarTasas({ automatico: true });
 }
 
 /* ============================ puente EUR/COP =================================== */
@@ -395,7 +511,19 @@ function actualizarBadgeConexion() {
 }
 
 /* ============================ historial ========================================== */
+function refrescarHistorialSiVisible() {
+  if (document.getElementById("tab-historial").classList.contains("active")) renderHistorial();
+}
+function renderEstadoHistorial() {
+  const el = document.getElementById("historial-estado");
+  const ultimo = ultimoRegistroAuto();
+  const cuando = ultimo ? fmtFecha(ultimo.timestamp) : "todavía no hay registros automáticos";
+  el.innerHTML = hayRegistroDeHoy()
+    ? `<span class="punto ok"></span>Al día. Última actualización automática: ${cuando}`
+    : `<span class="punto pendiente"></span>Pendiente la actualización de hoy (se hará sola al haber conexión). Última: ${cuando}`;
+}
 function renderHistorial() {
+  renderEstadoHistorial();
   const tbody = document.querySelector("#tabla-historial tbody");
   tbody.innerHTML = "";
   for (const reg of historial.slice().reverse()) {
@@ -461,14 +589,24 @@ function init() {
   historial = loadHistory();
 
   initTabs();
-  document.getElementById("btn-actualizar").addEventListener("click", actualizarTasas);
+  document.getElementById("btn-actualizar").addEventListener("click", () => actualizarTasas());
+  document.getElementById("btn-limpiar").addEventListener("click", limpiarMontos);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !e.target.closest(".editor")) limpiarMontos();
+  });
   document.getElementById("bridge-select").addEventListener("change", (e) => cambiarBridge(e.target.value));
   document.getElementById("btn-borrar-historial").addEventListener("click", borrarHistorial);
-  window.addEventListener("online", actualizarBadgeConexion);
+  window.addEventListener("online", () => { actualizarBadgeConexion(); revisarActualizacionDiaria(); });
   window.addEventListener("offline", actualizarBadgeConexion);
 
   renderGrid();
   actualizarBadgeConexion();
+
+  revisarActualizacionDiaria();
+  setInterval(revisarActualizacionDiaria, REVISION_DIARIA_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") revisarActualizacionDiaria();
+  });
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(() => { /* no crítico */ });

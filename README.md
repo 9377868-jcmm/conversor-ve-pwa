@@ -27,6 +27,49 @@ python -m http.server 5500
 
 Y abre `http://localhost:5500` en el navegador.
 
+## Archivo único para descargar
+
+`dist/conversor-ve.html` es la app completa en **un solo archivo HTML**
+(estilos, código, Chart.js e ícono incrustados). Se abre con doble clic en
+cualquier navegador, sin servidor; solo no incluye el modo offline del
+service worker. Para regenerarlo tras cambiar el código:
+
+```bash
+python build_standalone.py
+```
+
+## APK de Android (funciona sin internet)
+
+`dist/conversor-ve.apk` instala la app en Android 7.0 o superior. La interfaz,
+el cálculo y el historial van dentro del APK, así que abre y convierte sin
+conexión; solo pide internet para traer tasas nuevas.
+
+Para compilarlo (solo necesita Java 17+, Python 3, curl y unzip; las
+herramientas se bajan solas de Maven Central, sin Android Studio):
+
+```bash
+bash android/build_apk.sh
+```
+
+La primera vez crea la llave de firma `android/conversor-ve.p12` (no se sube
+a git). **Guárdala**: Android solo deja actualizar la app instalada con un
+APK firmado con la misma llave; con otra llave habría que desinstalar y se
+perdería el historial guardado. Para una versión nueva sube `VERSION_CODE`:
+
+```bash
+VERSION_CODE=3 VERSION_NAME=1.2 bash android/build_apk.sh
+```
+
+## Funciones
+
+- 🧹 **Limpiar**: borra todos los montos (también con la tecla `Esc`).
+- 📋 **Copiar** en cada moneda: copia el monto, la tasa y su equivalente en Bs.
+- La zona de montos tiene fondo y tipografía propios; el monto que escribes
+  queda resaltado y los calculados se ven atenuados.
+- **Historial diario automático**: al abrir la app (y cada 30 min mientras
+  esté abierta, al volver a ella o al recuperar conexión) se consultan las
+  tasas si todavía no hay un registro automático del día.
+
 ## Regenerar los íconos
 
 Los íconos (`icons/*.png`) se generan con Pillow, sin depender de ningún
